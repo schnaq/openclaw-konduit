@@ -1,0 +1,57 @@
+{
+  "id": "konduit",
+  "name": "konduit",
+  "description": "European AI inference through konduit, with live balance and rate limits.",
+  "version": "0.1.0",
+  "categories": ["models"],
+  "activation": {
+    "onStartup": false
+  },
+  "enabledByDefault": false,
+  "providers": ["konduit"],
+  "contracts": {
+    "usageProviders": ["konduit"]
+  },
+  "modelCatalog": {
+    "providers": {
+      "konduit": {
+        "baseUrl": "https://api.konduit.eu/v1",
+        "api": "openai-completions",
+        "defaultModel": "",
+        "models": []
+      }
+    },
+    "discovery": {
+      "konduit": "refreshable"
+    }
+  },
+  "setup": {
+    "providers": [
+      {
+        "id": "konduit",
+        "envVars": ["KONDUIT_API_KEY"]
+      }
+    ]
+  },
+  "providerAuthChoices": [
+    {
+      "provider": "konduit",
+      "method": "api-key",
+      "choiceId": "konduit-api-key",
+      "appGuidedSecret": true,
+      "choiceLabel": "konduit API key",
+      "groupId": "konduit",
+      "groupLabel": "konduit",
+      "groupHint": "API key",
+      "optionKey": "konduitApiKey",
+      "cliFlag": "--konduit-api-key",
+      "cliOption": "--konduit-api-key <key>",
+      "cliDescription": "konduit API key (kdt-…), minted in the konduit console"
+    }
+  ],
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {}
+  }
+}
