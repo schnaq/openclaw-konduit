@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - run: npm pack --dry-run
+      # The catalog is authenticated, so this needs the repository's key. GitHub
+      # withholds secrets from fork pull requests, and a fork must not be able
+      # to break the build by lacking a key it must not have.
+      - name: The committed model list matches konduit's catalog
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          KONDUIT_API_KEY: ${{ secrets.KONDUIT_API_KEY }}
+        run: npm run catalog:check
