@@ -38,6 +38,13 @@ if (models.length === 0) {
 // Keep the default the manifest already names while konduit still serves it;
 // otherwise the first active deployment. Never empty once there are models.
 const defaultModel = pickDefaultModel(body.data, provider.defaultModel);
+// mapCatalog and pickDefaultModel apply the same servable-chat predicate in two
+// places. They agree today; this catches the day one of them is changed alone,
+// because a default OpenClaw cannot find in the list is a broken manifest.
+if (!models.some((model) => model.id === defaultModel)) {
+  console.error(`default ${defaultModel} is not among the ${models.length} models written; refusing to write an inconsistent manifest`);
+  process.exit(2);
+}
 
 const next = {
   ...manifest,
