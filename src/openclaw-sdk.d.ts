@@ -54,3 +54,65 @@ declare module "openclaw/plugin-sdk/provider-catalog-shared" {
     catalog: ManifestProviderCatalog;
   }): ModelProviderConfig;
 }
+
+declare module "openclaw/plugin-sdk/provider-usage" {
+  /** One rate-limit window as the card draws it. The konduit card draws none. */
+  export type UsageWindow = {
+    label: string;
+    usedPercent: number;
+    resetAt?: number;
+  };
+
+  /**
+   * A monetary fact on the card. The SDK's union also carries "spend" and
+   * "budget" variants; konduit reports a balance, so that is the arm declared
+   * here — narrowing to what this plugin produces rather than restating a union
+   * nothing reads.
+   */
+  export type ProviderUsageBilling = {
+    type: "balance";
+    label?: string;
+    amount: number;
+    unit: string;
+  };
+
+  /** What a usage hook answers. `costHistory` is unknown here: konduit sends none. */
+  export type ProviderUsageSnapshot = {
+    provider: string;
+    displayName: string;
+    windows: UsageWindow[];
+    billing?: ProviderUsageBilling[];
+    costHistory?: unknown;
+    summary?: string;
+    plan?: string;
+    accountEmail?: string;
+    error?: string;
+  };
+
+  /** fetch with a timeout signal merged into init.signal. Does not throw on a non-2xx. */
+  export function fetchJson(
+    url: string,
+    init: RequestInit,
+    timeoutMs: number,
+    fetchFn: typeof fetch,
+  ): Promise<Response>;
+
+  /**
+   * The card for a provider that could not answer. displayName falls back to the
+   * provider id when the SDK knows no label for it, which is konduit's case.
+   */
+  export function buildUsageErrorSnapshot(provider: string, error: string): ProviderUsageSnapshot;
+}
+
+declare module "openclaw/plugin-sdk/provider-http" {
+  /**
+   * Reads a response body as JSON, bounded, and throws `${label}: malformed JSON
+   * response` when it does not parse. The caller decides what that means for the
+   * card; nothing about the rejection is written to the snapshot by this call.
+   */
+  export function readProviderJsonResponse<T>(
+    response: Response,
+    label: string,
+    opts?: { requestHeaders?: Record<string, string> },
+  ): Promise<T>;
+}
