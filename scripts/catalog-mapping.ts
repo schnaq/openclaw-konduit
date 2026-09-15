@@ -1,0 +1,64 @@
+// One konduit deployment, as GET /v1/models returns it — the fields this
+// generator reads. See services/gateway/internal/catalog/models.go in
+// schnaq/konduit for the full body.
+export type KonduitModel = {
+  id: string;
+  display_name: string;
+  modality: string;
+  context_window: number;
+  max_output_tokens: number | null;
+  capabilities: { streaming: boolean; tools: boolean; json_mode: boolean };
+  pricing: { currency: string; unit: string; input: number; output: number | null };
+  deployment: { status: string };
+};
+
+// One entry of openclaw.plugin.json's modelCatalog.providers.konduit.models.
+export type ManifestModel = {
+  id: string;
+  name: string;
+  reasoning: boolean;
+  input: ["text"];
+  contextWindow: number;
+  maxTokens: number;
+  // OpenClaw labels these USD per million tokens and has no currency field.
+  // konduit prices in EUR per million; the numbers go in as they are and the
+  // README says what the dollar sign in OpenClaw's session cost really is.
+  cost: { input: number; output: number; cacheRead: number; cacheWrite: number };
+  compat: { supportsUsageInStreaming: boolean; supportsTools: boolean; maxTokensField: "max_tokens" };
+};
+
+const PRICING_UNIT = "micro_eur_per_million_tokens";
+const MICRO_PER_UNIT = 1_000_000;
+// konduit reports max_output_tokens as null for a deployment whose operator
+// publishes no cap. OpenClaw needs a number; this is a conservative one.
+const FALLBACK_MAX_TOKENS = 4096;
+
+/** Active chat deployments, sorted by id so two runs produce one diff. */
+export function mapCatalog(models: KonduitModel[]): ManifestModel[] {
+  return models
+    .filter((model) => model.modality === "chat" && model.deployment.status === "active")
+    .map(mapModel)
+    .sort((a, b) => a.id.localeCompare(b.id));
+}
+
+export function mapModel(model: KonduitModel): ManifestModel {
+  if (model.pricing.unit !== PRICING_UNIT) {
+    throw new Error(`unexpected pricing unit ${model.pricing.unit} on ${model.id}; this generator understands ${PRICING_UNIT}`);
+  }
+  const input = model.pricing.input / MICRO_PER_UNIT;
+  const output = (model.pricing.output ?? model.pricing.input) / MICRO_PER_UNIT;
+  return {
+    id: model.id,
+    name: model.display_name,
+    reasoning: false,
+    input: ["text"],
+    contextWindow: model.context_window,
+    maxTokens: model.max_output_tokens ?? FALLBACK_MAX_TOKENS,
+    cost: { input, output, cacheRead: 0, cacheWrite: 0 },
+    compat: {
+      supportsUsageInStreaming: model.capabilities.streaming,
+      supportsTools: model.capabilities.tools,
+      maxTokensField: "max_tokens",
+    },
+  };
+}
