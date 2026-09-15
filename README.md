@@ -7,14 +7,14 @@ provider card.
 ## Install
 
 ```sh
-openclaw plugins install clawhub:@schnaq/openclaw-konduit
+openclaw plugins install clawhub:@konduiteu/openclaw
 openclaw plugins enable konduit
 ```
 
 or from npm, which asks you to confirm the source:
 
 ```sh
-openclaw plugins install npm:@schnaq/openclaw-konduit
+openclaw plugins install npm:@konduiteu/openclaw
 ```
 
 Set `KONDUIT_API_KEY` to a key minted in the [konduit console](https://console.konduit.eu),
@@ -111,7 +111,7 @@ After it, set the trusted publisher once and the dispatch workflow publishes
 with GitHub OIDC and no stored token:
 
 ```sh
-npm exec clawhub -- package trusted-publisher set @schnaq/openclaw-konduit \
+npm exec clawhub -- package trusted-publisher set @konduiteu/openclaw \
   --repository schnaq/openclaw-konduit \
   --workflow-filename clawhub-publish.yml
 ```

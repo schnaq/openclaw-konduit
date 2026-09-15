@@ -1,5 +1,5 @@
 {
-  "name": "@schnaq/openclaw-konduit",
+  "name": "@konduiteu/openclaw",
   "version": "0.1.0",
   "description": "OpenClaw provider plugin for konduit: European inference, with live balance and rate limits on the provider card.",
   "license": "MIT",
@@ -53,8 +53,8 @@
       "openclawVersion": "2026.9.4"
     },
     "install": {
-      "clawhubSpec": "clawhub:@schnaq/openclaw-konduit",
-      "npmSpec": "@schnaq/openclaw-konduit",
+      "clawhubSpec": "clawhub:@konduiteu/openclaw",
+      "npmSpec": "@konduiteu/openclaw",
       "defaultChoice": "clawhub",
       "minHostVersion": ">=2026.9.4"
     },
