@@ -27,6 +27,18 @@ export type ManifestModel = {
   compat: { supportsUsageInStreaming: boolean; supportsTools: boolean; maxTokensField: "max_tokens" };
 };
 
+// konduit's own deployment id grammar: a provider slug, a slash, the model
+// name, and an optional `:variant`. The model segment stays free-form because
+// konduit does not control what characters an upstream model name contains —
+// apart from `@`, which is the whole reason this is checked here.
+//
+// The separator used to be `@` and moved to `:` on 2026-09-11, because enough
+// of the ecosystem reads `@` as an instance selector to corrupt an id in
+// transit. These ids are written into a manifest that lands in every user's
+// OpenClaw config, so shipping the old spelling would plant it where it is
+// hardest to take back. The same pattern guards konduit's live canary.
+const DEPLOYMENT_ID = /^[a-z0-9-]+\/[^:@]+(:[a-z0-9.-]+)?$/;
+
 const PRICING_UNIT = "micro_eur_per_million_tokens";
 const MICRO_PER_UNIT = 1_000_000;
 // konduit reports max_output_tokens as null for a deployment whose operator
@@ -66,6 +78,9 @@ export function pickDefaultModel(models: KonduitModel[], current: string): strin
 }
 
 export function mapModel(model: KonduitModel): ManifestModel {
+  if (!DEPLOYMENT_ID.test(model.id)) {
+    throw new Error(`deployment id ${model.id} is not provider/model[:variant]; konduit does not accept '@' anywhere and this catalog will not publish it`);
+  }
   if (model.pricing.unit !== PRICING_UNIT) {
     throw new Error(`unexpected pricing unit ${model.pricing.unit} on ${model.id}; this generator understands ${PRICING_UNIT}`);
   }

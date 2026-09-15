@@ -43,6 +43,15 @@ describe("mapModel", () => {
     expect(mapModel(item({ max_output_tokens: null })).maxTokens).toBe(4096);
   });
 
+  it("refuses an id spelled with the separator konduit moved away from", () => {
+    expect(() => mapModel(item({ id: "hetzner/qwen3.6-35b-a3b@fp8" }))).toThrow(/@/);
+  });
+
+  it("accepts both shapes konduit's own grammar allows", () => {
+    expect(mapModel(item({ id: "hetzner/qwen3.8-27b" })).id).toBe("hetzner/qwen3.8-27b");
+    expect(mapModel(item({ id: "scaleway/mistral-small-3.2:fp8" })).id).toBe("scaleway/mistral-small-3.2:fp8");
+  });
+
   it("refuses a pricing unit it does not understand rather than mis-pricing", () => {
     expect(() =>
       mapModel(item({ pricing: { currency: "EUR", unit: "eur_per_token", input: 1, output: 1 } })),
