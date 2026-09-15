@@ -33,12 +33,36 @@ const MICRO_PER_UNIT = 1_000_000;
 // publishes no cap. OpenClaw needs a number; this is a conservative one.
 const FALLBACK_MAX_TOKENS = 4096;
 
-/** Active chat deployments, sorted by id so two runs produce one diff. */
+// konduit serves a deployment while its status is active or deprecated —
+// deprecated is discouraged, not switched off, and a user whose config names
+// one would find it missing from the catalog if we dropped it. `retired`, and
+// any status this generator has not seen, is left out rather than advertised.
+const SERVABLE_STATUS = new Set(["active", "deprecated"]);
+
+function isServableChat(model: KonduitModel): boolean {
+  return model.modality === "chat" && SERVABLE_STATUS.has(model.deployment.status);
+}
+
+/** Servable chat deployments, sorted by id so two runs produce one diff. */
 export function mapCatalog(models: KonduitModel[]): ManifestModel[] {
   return models
-    .filter((model) => model.modality === "chat" && model.deployment.status === "active")
+    .filter(isServableChat)
     .map(mapModel)
     .sort((a, b) => a.id.localeCompare(b.id));
+}
+
+/**
+ * The id the manifest should name as its default: the one it already names
+ * while konduit still serves it — deprecated included, since it still answers —
+ * otherwise the first active deployment in id order, so a fresh manifest never
+ * defaults to a model whose operator is winding it down. Empty when konduit
+ * serves no chat deployment, which the generator refuses to write anyway.
+ */
+export function pickDefaultModel(models: KonduitModel[], current: string): string {
+  const servable = models.filter(isServableChat).sort((a, b) => a.id.localeCompare(b.id));
+  if (servable.some((model) => model.id === current)) return current;
+  const active = servable.find((model) => model.deployment.status === "active");
+  return (active ?? servable[0])?.id ?? "";
 }
 
 export function mapModel(model: KonduitModel): ManifestModel {

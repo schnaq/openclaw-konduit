@@ -5,7 +5,7 @@
 // Needs KONDUIT_API_KEY: the catalog is authenticated (it carries prices).
 // A key with only the models:read scope is enough and is what CI holds.
 import { readFileSync, writeFileSync } from "node:fs";
-import { mapCatalog, type KonduitModel } from "./catalog-mapping.ts";
+import { mapCatalog, pickDefaultModel, type KonduitModel } from "./catalog-mapping.ts";
 
 const MANIFEST = new URL("../openclaw.plugin.json", import.meta.url);
 
@@ -36,10 +36,8 @@ if (models.length === 0) {
   process.exit(2);
 }
 // Keep the default the manifest already names while konduit still serves it;
-// otherwise the first deployment in id order. Never empty once there are models.
-const defaultModel = models.some((model) => model.id === provider.defaultModel)
-  ? provider.defaultModel
-  : models[0]!.id;
+// otherwise the first active deployment. Never empty once there are models.
+const defaultModel = pickDefaultModel(body.data, provider.defaultModel);
 
 const next = {
   ...manifest,

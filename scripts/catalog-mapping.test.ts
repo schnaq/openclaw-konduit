@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mapCatalog, mapModel, type KonduitModel } from "./catalog-mapping.ts";
+import { mapCatalog, mapModel, pickDefaultModel, type KonduitModel } from "./catalog-mapping.ts";
 
 function item(overrides: Partial<KonduitModel> = {}): KonduitModel {
   return {
@@ -51,13 +51,47 @@ describe("mapModel", () => {
 });
 
 describe("mapCatalog", () => {
-  it("keeps active chat deployments only, sorted by id", () => {
+  it("keeps every chat deployment konduit still serves, sorted by id", () => {
     const models = mapCatalog([
       item({ id: "z/last" }),
       item({ id: "a/embed", modality: "embedding" }),
       item({ id: "a/retired", deployment: { status: "retired" } }),
+      item({ id: "a/deprecated", deployment: { status: "deprecated" } }),
       item({ id: "a/first" }),
     ]);
-    expect(models.map((model) => model.id)).toEqual(["a/first", "z/last"]);
+    expect(models.map((model) => model.id)).toEqual(["a/deprecated", "a/first", "z/last"]);
+  });
+
+  it("drops a status it has never heard of rather than advertising it", () => {
+    expect(mapCatalog([item({ id: "a/odd", deployment: { status: "draining" } })])).toEqual([]);
+  });
+});
+
+describe("pickDefaultModel", () => {
+  it("keeps the default the manifest already names while konduit still serves it", () => {
+    const items = [item({ id: "a/first" }), item({ id: "z/last" })];
+    expect(pickDefaultModel(items, "z/last")).toBe("z/last");
+  });
+
+  it("keeps a deprecated default, because deprecated still answers", () => {
+    const items = [item({ id: "a/first" }), item({ id: "z/old", deployment: { status: "deprecated" } })];
+    expect(pickDefaultModel(items, "z/old")).toBe("z/old");
+  });
+
+  it("prefers an active deployment when it has to choose a new default", () => {
+    const items = [item({ id: "a/old", deployment: { status: "deprecated" } }), item({ id: "z/fresh" })];
+    expect(pickDefaultModel(items, "gone/away")).toBe("z/fresh");
+  });
+
+  it("takes the first servable deployment when none is active", () => {
+    const items = [
+      item({ id: "z/old", deployment: { status: "deprecated" } }),
+      item({ id: "a/older", deployment: { status: "deprecated" } }),
+    ];
+    expect(pickDefaultModel(items, "")).toBe("a/older");
+  });
+
+  it("returns nothing when konduit serves no chat deployment at all", () => {
+    expect(pickDefaultModel([item({ modality: "embedding" })], "")).toBe("");
   });
 });
