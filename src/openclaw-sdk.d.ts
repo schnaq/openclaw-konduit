@@ -1,32 +1,30 @@
 // openclaw@2026.9.4 ships its plugin SDK as JavaScript without declarations for
 // the provider surface. Of the six public subpaths this plugin is allowed to
 // use, only `plugin-entry` carries a `types` condition in the package's exports
-// map, and `buildManifestModelProviderConfig` has no declaration anywhere in the
-// package at all. Under `strict`, tsc answers every one of those imports with
-// TS7016 and the build stops.
+// map. Under `strict`, tsc answers every other import with TS7016 and the build
+// stops. So the declarations live here.
 //
-// So the declarations live here. They are read off the shipped bundle —
-// dist/provider-catalog-2Xpqgcw3.mjs for the function below — rather than
-// guessed, and they are deliberately no wider than this plugin uses: a type
-// that claims more than it was read from is worse than none.
+// Two rules kept them honest. Where `plugin-entry` already types something, it
+// is *derived* from there rather than restated — a second hand-written copy of
+// ProviderUsageSnapshot drifts from the one OpenClaw actually checks against,
+// and the first draft of this file did exactly that. Where nothing types it,
+// the shape is read off the shipped bundle (dist/provider-entry-BeD2ux9P.mjs,
+// dist/provider-catalog-2Xpqgcw3.mjs) and kept no wider than this plugin uses.
 //
 // Delete this file when a release types its own plugin SDK. Nothing else in the
-// repository has to change when it does, which is why the declarations are
-// module declarations and not a rewritten import.
+// repository has to change when it does.
 
 declare module "openclaw/plugin-sdk/provider-model-shared" {
-  /** One model as OpenClaw's catalog holds it. Wider than this in the SDK; this is what the plugin reads back. */
-  export type CatalogModel = {
-    id: string;
-    [key: string]: unknown;
-  };
-
-  /** What a provider contributes to the catalog: where to call, how, and what it serves. */
+  /**
+   * What a provider contributes to the catalog: where to call, how, and what it
+   * serves. Written out rather than derived — nothing in `plugin-entry` exposes
+   * this shape, because the entry helper consumes it and never hands it back.
+   */
   export type ModelProviderConfig = {
     baseUrl: string;
     api?: string;
     headers?: Record<string, string>;
-    models: CatalogModel[];
+    models: { id: string; [key: string]: unknown }[];
   };
 }
 
@@ -56,38 +54,15 @@ declare module "openclaw/plugin-sdk/provider-catalog-shared" {
 }
 
 declare module "openclaw/plugin-sdk/provider-usage" {
-  /** One rate-limit window as the card draws it. The konduit card draws none. */
-  export type UsageWindow = {
-    label: string;
-    usedPercent: number;
-    resetAt?: number;
-  };
+  import type { ProviderPlugin } from "openclaw/plugin-sdk/plugin-entry";
 
-  /**
-   * A monetary fact on the card. The SDK's union also carries "spend" and
-   * "budget" variants; konduit reports a balance, so that is the arm declared
-   * here — narrowing to what this plugin produces rather than restating a union
-   * nothing reads.
-   */
-  export type ProviderUsageBilling = {
-    type: "balance";
-    label?: string;
-    amount: number;
-    unit: string;
-  };
+  /** The card a usage hook answers, as OpenClaw's own hook signature defines it. */
+  export type ProviderUsageSnapshot = NonNullable<
+    Awaited<ReturnType<NonNullable<ProviderPlugin["fetchUsageSnapshot"]>>>
+  >;
 
-  /** What a usage hook answers. `costHistory` is unknown here: konduit sends none. */
-  export type ProviderUsageSnapshot = {
-    provider: string;
-    displayName: string;
-    windows: UsageWindow[];
-    billing?: ProviderUsageBilling[];
-    costHistory?: unknown;
-    summary?: string;
-    plan?: string;
-    accountEmail?: string;
-    error?: string;
-  };
+  /** One monetary fact on that card. konduit reports the `balance` arm. */
+  export type ProviderUsageBilling = NonNullable<ProviderUsageSnapshot["billing"]>[number];
 
   /** fetch with a timeout signal merged into init.signal. Does not throw on a non-2xx. */
   export function fetchJson(
@@ -115,4 +90,66 @@ declare module "openclaw/plugin-sdk/provider-http" {
     label: string,
     opts?: { requestHeaders?: Record<string, string> },
   ): Promise<T>;
+}
+
+declare module "openclaw/plugin-sdk/provider-entry" {
+  import type {
+    OpenClawPluginApi,
+    OpenClawPluginConfigSchema,
+    OpenClawPluginDefinition,
+    ProviderPlugin,
+  } from "openclaw/plugin-sdk/plugin-entry";
+  import type { ModelProviderConfig } from "openclaw/plugin-sdk/provider-model-shared";
+
+  /**
+   * The catalog a manifest-backed provider declares. This is not
+   * ProviderPluginCatalog: the entry helper accepts either that `run` shape or
+   * this one, and builds the `run` itself from these fields. Passing a
+   * ProviderPluginCatalog through unchanged is the other arm below.
+   */
+  export type ManifestBackedCatalog = {
+    /** Defaults to building from the manifest's own modelCatalog entry. */
+    buildProvider?: () => ModelProviderConfig | Promise<ModelProviderConfig>;
+    buildStaticProvider?: () => ModelProviderConfig | Promise<ModelProviderConfig>;
+    /** Lets a user's configured models.providers.<id>.baseUrl win over the manifest's. */
+    allowExplicitBaseUrl?: boolean;
+    /** true, or the discovery mode to use, to list models from {baseUrl}/models at runtime. */
+    liveModelDiscovery?: boolean | string;
+    discoveryMode?: string;
+  };
+
+  /**
+   * What a single-provider plugin declares. `provider.id` is optional: the entry
+   * falls back to the plugin's own id, which is how this plugin is written.
+   */
+  export type SingleProviderPluginOptions = {
+    id: string;
+    name: string;
+    description?: string;
+    kind?: string;
+    configSchema?: OpenClawPluginConfigSchema;
+    /** The parsed openclaw.plugin.json. Auth and the model catalog are read from it. */
+    manifest?: Record<string, unknown>;
+    provider:
+      | SingleProviderDeclaration
+      | ((api: OpenClawPluginApi) => SingleProviderDeclaration | undefined);
+  };
+
+  // `auth` is optional here although ProviderPlugin requires it: the entry
+  // derives the provider's auth methods from the manifest's providerAuthChoices
+  // when the declaration names none, which is how this plugin declares auth once
+  // in openclaw.plugin.json instead of twice.
+  type SingleProviderDeclaration = Omit<ProviderPlugin, "id" | "catalog" | "auth"> & {
+    id?: string;
+    auth?: ProviderPlugin["auth"];
+    catalog: ManifestBackedCatalog | ProviderPlugin["catalog"];
+  };
+
+  /**
+   * Wraps one provider as a plugin entry. Throws at registration when neither
+   * the provider's catalog nor the manifest can say what the provider serves.
+   */
+  export function defineSingleProviderPluginEntry(
+    options: SingleProviderPluginOptions,
+  ): OpenClawPluginDefinition;
 }
