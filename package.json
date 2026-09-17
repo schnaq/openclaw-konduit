@@ -6,7 +6,7 @@
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "https://github.com/schnaq/openclaw-konduit"
+    "url": "git+https://github.com/schnaq/openclaw-konduit.git"
   },
   "homepage": "https://konduit.eu",
   "engines": {
