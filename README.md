@@ -34,6 +34,18 @@ If you had configured konduit by hand under `models.providers.konduit`, keep
 it: OpenClaw merges your entries with the plugin's by model id, and your
 `baseUrl` wins.
 
+**A failed connection test does not mean konduit is unreachable.** OpenClaw
+probes a provider by asking the configured model for a reply worth eight output
+tokens. A deployment that reasons spends them on reasoning and returns no
+visible text, and the probe reads that as a failure — konduit answered `200`.
+Eight of the fourteen chat deployments reason, the default `scaleway/gpt-oss-120b`
+among them, so a fresh install is likely to show it. Ask the model something
+instead; that is the test that counts:
+
+```sh
+openclaw agent --model konduit/scaleway/gpt-oss-120b --message "say OK"
+```
+
 ## What the card shows
 
 - **Available credit** — the organisation's `available_micro_eur`, in EUR.
