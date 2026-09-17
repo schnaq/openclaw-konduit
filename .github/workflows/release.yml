@@ -1,0 +1,85 @@
+# A tag releases. `v1.2.3` publishes 1.2.3 to npm; ClawHub is published by
+# clawhub-publish.yml on the same tag, because ClawHub's trusted publisher for
+# this package names that workflow and the OIDC claim has to match it.
+#
+# The tag, package.json and openclaw.plugin.json must name one version, which
+# is checked before anything is uploaded. A version npm already has is skipped
+# rather than failed, so a release cut by hand and tagged afterwards is green.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      npm: ${{ steps.registry.outputs.npm }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - id: version
+        name: The tag, package.json and the manifest name one version
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          pkg=$(node -p "require('./package.json').version")
+          manifest=$(node -p "require('./openclaw.plugin.json').version")
+          if [ "$tag" != "$pkg" ] || [ "$tag" != "$manifest" ]; then
+            echo "::error::tag $tag, package.json $pkg, openclaw.plugin.json $manifest"
+            exit 1
+          fi
+          echo "version=$tag" >> "$GITHUB_OUTPUT"
+
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - run: npm pack --dry-run
+
+      # A release must not ship a model list that konduit's catalog has already
+      # moved past.
+      - name: The committed model list matches konduit's catalog
+        env:
+          KONDUIT_API_KEY: ${{ secrets.KONDUIT_API_KEY }}
+        run: npm run catalog:check
+
+      - id: registry
+        name: Does npm still need this version
+        run: |
+          if npm view "@konduiteu/openclaw@${{ steps.version.outputs.version }}" version >/dev/null 2>&1; then
+            echo "npm already has it; the publish job will be skipped"
+            echo "npm=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "npm=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  npm:
+    needs: verify
+    if: needs.verify.outputs.npm == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # Provenance, and npm trusted publishing where the package is configured
+      # for it — with that configured, NPM_TOKEN is never read.
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          registry-url: https://registry.npmjs.org
+      - run: npm ci
+      - run: npm run build
+      - run: npm publish --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

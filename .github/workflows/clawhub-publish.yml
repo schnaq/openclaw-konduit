@@ -1,6 +1,13 @@
+# ClawHub's half of a release. A `v*` tag publishes; a manual run previews by
+# default. This workflow is named in the package's ClawHub trusted publisher
+# config, so the OIDC token it gets is the whole credential — moving the publish
+# into release.yml would break that trust, which is why a tag starts two
+# workflows rather than one.
 name: ClawHub Publish
 
 on:
+  push:
+    tags: ["v*"]
   workflow_dispatch:
     inputs:
       dry_run:
@@ -9,12 +16,49 @@ on:
         type: boolean
         default: true
 
+permissions:
+  contents: read
+
 jobs:
+  gate:
+    runs-on: ubuntu-latest
+    outputs:
+      publish: ${{ steps.decide.outputs.publish }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - id: decide
+        name: One version in the tag and both files, and not one ClawHub already has
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          tag="${GITHUB_REF_NAME#v}"
+          pkg=$(node -p "require('./package.json').version")
+          manifest=$(node -p "require('./openclaw.plugin.json').version")
+          if [ "$tag" != "$pkg" ] || [ "$tag" != "$manifest" ]; then
+            echo "::error::tag $tag, package.json $pkg, openclaw.plugin.json $manifest"
+            exit 1
+          fi
+          latest=$(npx --yes clawhub@0.23.3 package inspect @konduiteu/openclaw --json 2>/dev/null \
+            | node -e "let s='';process.stdin.on('data',c=>s+=c).on('end',()=>{try{const j=JSON.parse(s.slice(s.indexOf('{')));process.stdout.write(String(j.package?.latestVersion ?? ''))}catch{}})")
+          if [ "$latest" = "$tag" ]; then
+            echo "ClawHub already has $tag; skipping"
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          fi
+
   publish:
+    needs: gate
+    if: needs.gate.outputs.publish == 'true'
     permissions:
       actions: read
       contents: read
       id-token: write
     uses: openclaw/clawhub/.github/workflows/package-publish.yml@9d49df109d4ad3dc8a6ecf05d26b39f46d294721
     with:
-      dry_run: ${{ inputs.dry_run }}
+      dry_run: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || false }}
