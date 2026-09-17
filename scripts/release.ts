@@ -7,8 +7,8 @@
 //   node scripts/release.ts 0.2.0 --local-publish  # …and upload from here
 //
 // `--local-publish` exists for a registry CI cannot reach yet: it publishes
-// from this machine and still pushes the tag, and both workflows skip a
-// version their registry already has, so the tag lands green either way.
+// from this machine and still pushes the tag, and both workflows skip a version
+// their registry already has, so the tag lands green either way.
 // ClawHub records a manual publish as an override of the trusted publisher,
 // with the reason below; npm gets no provenance that way. Prefer the tag.
 import { execFileSync } from "node:child_process";
@@ -140,7 +140,7 @@ if (localPublish) {
     "--wait",
   ]);
 } else if (release) {
-  console.log("  release.yml publishes to npm, clawhub-publish.yml to ClawHub, once the tag is pushed");
+  console.log("  release.yml publishes to npm and dispatches clawhub-publish.yml for ClawHub, once the tag is pushed");
 } else {
   run("npm", ["publish", "--access", "public", "--dry-run"]);
 }

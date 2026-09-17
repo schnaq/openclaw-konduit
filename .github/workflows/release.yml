@@ -1,6 +1,8 @@
-# A tag releases. `v1.2.3` publishes 1.2.3 to npm; ClawHub is published by
-# clawhub-publish.yml on the same tag, because ClawHub's trusted publisher for
-# this package names that workflow and the OIDC claim has to match it.
+# A tag releases. `v1.2.3` publishes 1.2.3 to npm, then dispatches
+# clawhub-publish.yml at the same tag for ClawHub — that workflow is named in
+# the package's trusted publisher config, and ClawHub's reusable workflow only
+# accepts an OIDC token in place of a stored credential on a `workflow_dispatch`
+# run, so the dispatch is what keeps the release credential-free.
 #
 # The tag, package.json and openclaw.plugin.json must name one version, which
 # is checked before anything is uploaded. A version npm already has is skipped
@@ -83,3 +85,18 @@ jobs:
       - run: npm publish --access public --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  clawhub:
+    needs: [verify, npm]
+    # `always()` so a skipped npm job (a version npm already had) still lets
+    # ClawHub run; the dispatched workflow skips a version it already has too.
+    if: always() && needs.verify.result == 'success' && needs.npm.result != 'failure'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - uses: actions/checkout@v7
+      - name: Dispatch the ClawHub publish at this tag
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run clawhub-publish.yml --ref "${GITHUB_REF_NAME}" -f dry_run=false
