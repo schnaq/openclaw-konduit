@@ -9,6 +9,10 @@
 #
 # This file's name is in the package's trusted publisher config; publishing
 # from another workflow would break that trust.
+#
+# The ClawPack is built and packed here rather than by ClawHub's packer: that
+# packer does not run npm lifecycle scripts, so the prepack that builds dist/
+# never fires and the artifact ships without the code. 0.2.0 went out that way.
 name: ClawHub Publish
 
 on:
@@ -55,8 +59,36 @@ jobs:
             echo "publish=true" >> "$GITHUB_OUTPUT"
           fi
 
-  publish:
+  pack:
     needs: gate
+    if: needs.gate.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Pack the ClawPack, dist and all
+        run: npx clawhub package pack . --pack-destination "${RUNNER_TEMP}/clawpack"
+      - name: The artifact carries the built plugin
+        run: |
+          tgz=$(ls "${RUNNER_TEMP}/clawpack"/*.tgz)
+          tar -tzf "$tgz" | grep -q '^package/dist/index.js$' || {
+            echo "::error::the ClawPack has no dist/index.js; OpenClaw could not load it"
+            tar -tzf "$tgz"
+            exit 1
+          }
+      - uses: actions/upload-artifact@v7
+        with:
+          name: clawhub-clawpack
+          path: ${{ runner.temp }}/clawpack/*.tgz
+          if-no-files-found: error
+
+  publish:
+    needs: [gate, pack]
     if: needs.gate.outputs.publish == 'true'
     permissions:
       actions: read
@@ -65,3 +97,4 @@ jobs:
     uses: openclaw/clawhub/.github/workflows/package-publish.yml@9d49df109d4ad3dc8a6ecf05d26b39f46d294721
     with:
       dry_run: ${{ inputs.dry_run }}
+      package_artifact_name: clawhub-clawpack
