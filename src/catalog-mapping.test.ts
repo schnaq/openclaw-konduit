@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mapCatalog, mapModel, pickDefaultModel, type KonduitModel } from "./catalog-mapping.ts";
+import { mapCatalog, mapModel, pickDefaultModel, type KonduitModel } from "./catalog-mapping.js";
 
 function item(overrides: Partial<KonduitModel> = {}): KonduitModel {
   return {
@@ -8,6 +8,7 @@ function item(overrides: Partial<KonduitModel> = {}): KonduitModel {
     modality: "chat",
     context_window: 128000,
     max_output_tokens: 8192,
+    reasoning: false,
     capabilities: { streaming: true, tools: true, json_mode: true },
     pricing: { currency: "EUR", unit: "micro_eur_per_million_tokens", input: 100000, output: 300000 },
     deployment: { status: "active" },
@@ -37,6 +38,11 @@ describe("mapModel", () => {
       maxTokens: 8192,
       compat: { supportsUsageInStreaming: true, supportsTools: true, maxTokensField: "max_tokens" },
     });
+  });
+
+  it("says a model reasons when konduit says it does, rather than guessing", () => {
+    expect(mapModel(item({ reasoning: true })).reasoning).toBe(true);
+    expect(mapModel(item({ reasoning: false })).reasoning).toBe(false);
   });
 
   it("falls back to a fixed output cap when konduit reports none", () => {

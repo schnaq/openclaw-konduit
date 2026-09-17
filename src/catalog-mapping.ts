@@ -7,6 +7,10 @@ export type KonduitModel = {
   modality: string;
   context_window: number;
   max_output_tokens: number | null;
+  // Not inside `capabilities`: that block says what the weights can do, this
+  // says what they do. true means the model answers with reasoning tokens
+  // before its reply, and is billed for them. Required since contract 1.2.0.
+  reasoning: boolean;
   capabilities: { streaming: boolean; tools: boolean; json_mode: boolean };
   pricing: { currency: string; unit: string; input: number; output: number | null };
   deployment: { status: string };
@@ -89,7 +93,7 @@ export function mapModel(model: KonduitModel): ManifestModel {
   return {
     id: model.id,
     name: model.display_name,
-    reasoning: false,
+    reasoning: model.reasoning,
     input: ["text"],
     contextWindow: model.context_window,
     maxTokens: model.max_output_tokens ?? FALLBACK_MAX_TOKENS,

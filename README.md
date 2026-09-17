@@ -57,9 +57,12 @@ them, it does not switch them off, and a model you already have in your config
 should not vanish from the list because of a label. Only `retired` deployments
 are left out. The default model is never a deprecated one.
 
-CI checks the committed list against the live catalog. Live discovery is on
-as well, so a deployment konduit adds appears before the next release — at
-cost zero until the generator has written its price.
+CI checks the committed list against the live catalog. Live discovery is on as
+well, and it reads konduit's catalog with the same projection the generator
+uses: a deployment konduit adds appears before the next release with its real
+context window, output cap, capabilities and price, and can be selected right
+away. Deployments that do not serve chat — the embedding ones — stay out of the
+model list rather than being offered as something to talk to.
 
 **One caveat.** OpenClaw prices models in US dollars per million tokens and
 has no currency field. konduit prices in euros; the euro figures are stored

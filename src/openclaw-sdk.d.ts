@@ -51,6 +51,22 @@ declare module "openclaw/plugin-sdk/provider-catalog-shared" {
     providerId: string;
     catalog: ManifestProviderCatalog;
   }): ModelProviderConfig;
+
+  /**
+   * OpenClaw's process-local cache for live catalog reads, shared with its own
+   * discovery so a plugin's lookup and OpenClaw's listing do not each pay for a
+   * request. `shouldCache` decides whether a resolved value is kept; a rejected
+   * load is never cached.
+   */
+  export function getCachedLiveCatalogValue<T>(params: {
+    keyParts: readonly string[];
+    ttlMs?: number;
+    load: () => Promise<T>;
+    shouldCache?: (value: T) => boolean;
+  }): Promise<T>;
+
+  /** Drops that cache. Exported by the SDK for tests and isolated probes. */
+  export function clearLiveCatalogCacheForTests(): void;
 }
 
 declare module "openclaw/plugin-sdk/provider-usage" {
@@ -113,8 +129,20 @@ declare module "openclaw/plugin-sdk/provider-entry" {
     buildStaticProvider?: () => ModelProviderConfig | Promise<ModelProviderConfig>;
     /** Lets a user's configured models.providers.<id>.baseUrl win over the manifest's. */
     allowExplicitBaseUrl?: boolean;
-    /** true, or the discovery mode to use, to list models from {baseUrl}/models at runtime. */
-    liveModelDiscovery?: boolean | string;
+    /**
+     * true to list models from {baseUrl}/models at runtime with OpenClaw's own
+     * reader, or the discovery options to read those rows with. `projectRows`
+     * receives the parsed `data` array and the catalog OpenClaw would have used
+     * without discovery, and answers the models the provider actually serves.
+     */
+    liveModelDiscovery?:
+      | boolean
+      | {
+          projectRows?: (
+            rows: readonly unknown[],
+            fallback: ModelProviderConfig,
+          ) => ModelProviderConfig["models"];
+        };
     discoveryMode?: string;
   };
 
@@ -152,4 +180,22 @@ declare module "openclaw/plugin-sdk/provider-entry" {
   export function defineSingleProviderPluginEntry(
     options: SingleProviderPluginOptions,
   ): OpenClawPluginDefinition;
+}
+
+declare module "openclaw/plugin-sdk/provider-auth-runtime" {
+  import type { OpenClawConfig } from "openclaw/plugin-sdk/plugin-entry";
+
+  /**
+   * The API key OpenClaw holds for a provider, from config, the environment or
+   * the auth store — the same lookup its own request path makes. Answers
+   * nothing when there is no key, rather than throwing.
+   */
+  export function resolveApiKeyForProvider(params: {
+    provider: string;
+    cfg?: OpenClawConfig;
+    agentDir?: string;
+    workspaceDir?: string;
+    profileId?: string;
+    lockedProfile?: boolean;
+  }): Promise<{ apiKey?: string } | undefined>;
 }

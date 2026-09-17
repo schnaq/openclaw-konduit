@@ -5,7 +5,7 @@
 // Needs KONDUIT_API_KEY: the catalog is authenticated (it carries prices).
 // A key with only the models:read scope is enough and is what CI holds.
 import { readFileSync, writeFileSync } from "node:fs";
-import { mapCatalog, pickDefaultModel, type KonduitModel } from "./catalog-mapping.ts";
+import { mapCatalog, pickDefaultModel, type KonduitModel } from "../src/catalog-mapping.ts";
 
 const MANIFEST = new URL("../openclaw.plugin.json", import.meta.url);
 
