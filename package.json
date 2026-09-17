@@ -1,6 +1,6 @@
 {
   "name": "@konduiteu/openclaw",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "OpenClaw provider plugin for konduit: European inference, with live balance and rate limits on the provider card.",
   "license": "MIT",
   "type": "module",
