@@ -18,10 +18,17 @@ openclaw plugins install npm:@konduiteu/openclaw
 ```
 
 Set `KONDUIT_API_KEY` to a key minted in the [konduit console](https://console.konduit.eu),
-or run `openclaw onboard --konduit-api-key kdt-…`. The key needs the
-`usage:read` scope for the card to show a balance; a key created without any
-scopes is unrestricted and works as it is. A key narrowed to `chat:write` still
-completes, and the card says why it shows nothing.
+or run `openclaw onboard --konduit-api-key kdt-…`. A key created without any
+scopes is unrestricted and works as it is. A key that carries scopes needs:
+
+| Scope | What stops working without it |
+| --- | --- |
+| `chat:write` | inference — `POST /v1/chat/completions` |
+| `models:read` | the model list. The plugin reads konduit's catalog at startup and again when it resolves a model it does not list, so a key without this scope leaves you with no konduit models to choose from |
+| `usage:read` | the balance and the limits on the provider card, nothing else |
+
+konduit's scopes are a flat allowlist, so `chat:write` does not imply
+`models:read`; a scoped key is refused on every route it does not name.
 
 If you had configured konduit by hand under `models.providers.konduit`, keep
 it: OpenClaw merges your entries with the plugin's by model id, and your
@@ -51,6 +58,10 @@ context window, output cap and price, generated from `GET /v1/models`:
 ```sh
 KONDUIT_API_KEY=kdt-… npm run catalog
 ```
+
+The catalog is authenticated because it carries prices, so this needs a key
+with `models:read` — and nothing else. That is the scope the repository's
+`KONDUIT_API_KEY` secret carries, and all `catalog:check` in CI asks for.
 
 That includes deployments konduit marks `deprecated`: the status discourages
 them, it does not switch them off, and a model you already have in your config
