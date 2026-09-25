@@ -128,6 +128,14 @@ describe("projectKonduitLiveModels", () => {
     const fallback = buildKonduitProvider().models;
     expect(projectKonduitLiveModels([{ nonsense: true }], fallback)).toEqual(fallback);
   });
+
+  it("lists a live deployment as image-capable once konduit's catalog says it sees", () => {
+    const [model] = projectKonduitLiveModels(
+      [row({ id: "scaleway/brand-new-vl", capabilities: { streaming: true, tools: true, json_mode: true, vision: true } })],
+      [],
+    );
+    expect(model).toMatchObject({ id: "scaleway/brand-new-vl", input: ["text", "image"] });
+  });
 });
 
 describe("konduitLiveModelDiscovery", () => {

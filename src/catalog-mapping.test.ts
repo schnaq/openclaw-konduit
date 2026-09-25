@@ -63,6 +63,21 @@ describe("mapModel", () => {
       mapModel(item({ pricing: { currency: "EUR", unit: "eur_per_token", input: 1, output: 1 } })),
     ).toThrow(/eur_per_token/);
   });
+
+  it("adds image input when konduit says the model sees", () => {
+    const model = mapModel(item({ capabilities: { streaming: true, tools: true, json_mode: true, vision: true } }));
+    expect(model.input).toEqual(["text", "image"]);
+  });
+
+  it("stays text-only when konduit says the model does not see", () => {
+    const model = mapModel(item({ capabilities: { streaming: true, tools: true, json_mode: true, vision: false } }));
+    expect(model.input).toEqual(["text"]);
+  });
+
+  it("stays text-only when konduit has not shipped the vision field yet", () => {
+    const model = mapModel(item({ capabilities: { streaming: true, tools: true, json_mode: true } }));
+    expect(model.input).toEqual(["text"]);
+  });
 });
 
 describe("mapCatalog", () => {

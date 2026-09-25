@@ -11,7 +11,12 @@ export type KonduitModel = {
   // says what they do. true means the model answers with reasoning tokens
   // before its reply, and is billed for them. Required since contract 1.2.0.
   reasoning: boolean;
-  capabilities: { streaming: boolean; tools: boolean; json_mode: boolean };
+  // vision is optional because konduit does not send it yet: the field is
+  // landing in konduit's own catalog contract and will be required once that
+  // ships. Until then a model that answers with it absent is read the same as
+  // `false` — text-only — which is also what a konduit older than the field
+  // sends, so this stays backwards compatible on both ends.
+  capabilities: { streaming: boolean; tools: boolean; json_mode: boolean; vision?: boolean };
   pricing: { currency: string; unit: string; input: number; output: number | null };
   deployment: { status: string };
 };
@@ -21,7 +26,7 @@ export type ManifestModel = {
   id: string;
   name: string;
   reasoning: boolean;
-  input: ["text"];
+  input: ["text"] | ["text", "image"];
   contextWindow: number;
   maxTokens: number;
   // OpenClaw labels these USD per million tokens and has no currency field.
@@ -94,7 +99,10 @@ export function mapModel(model: KonduitModel): ManifestModel {
     id: model.id,
     name: model.display_name,
     reasoning: model.reasoning,
-    input: ["text"],
+    // OpenClaw reads this the same way for its own OpenAI-compatible provider
+    // (models.fetch): capabilities.vision true is the only thing that adds
+    // "image" to a model's input. Absent or false stays text-only.
+    input: model.capabilities.vision === true ? ["text", "image"] : ["text"],
     contextWindow: model.context_window,
     maxTokens: model.max_output_tokens ?? FALLBACK_MAX_TOKENS,
     cost: { input, output, cacheRead: 0, cacheWrite: 0 },
