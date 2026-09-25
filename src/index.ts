@@ -36,7 +36,9 @@ export default defineSingleProviderPluginEntry({
       // GET {baseUrl}/models: a deployment konduit adds appears without a plugin
       // release. konduit's catalog carries the context window, the output cap,
       // the capabilities and the price, so the rows are read here rather than
-      // by OpenClaw's generic reader, which would only find an id.
+      // by OpenClaw's generic reader, which would only find an id. The manifest
+      // declares this catalog "runtime" so that these rows are not overlaid by
+      // the manifest's for the same id; see the test that pins it.
       liveModelDiscovery: konduitLiveModelDiscovery,
       discoveryMode: "strict",
     },

@@ -2,7 +2,7 @@
   "id": "konduit",
   "name": "konduit",
   "description": "European AI inference through konduit, with live balance and rate limits.",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "categories": [
     "models"
   ],
@@ -533,7 +533,7 @@
       }
     },
     "discovery": {
-      "konduit": "refreshable"
+      "konduit": "runtime"
     }
   },
   "setup": {

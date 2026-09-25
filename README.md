@@ -24,7 +24,7 @@ scopes is unrestricted and works as it is. A key that carries scopes needs:
 | Scope | What stops working without it |
 | --- | --- |
 | `chat:write` | inference — `POST /v1/chat/completions` |
-| `models:read` | the model list. The plugin reads konduit's catalog at startup and again when it resolves a model it does not list, so a key without this scope leaves you with no konduit models to choose from |
+| `models:read` | the live model list. The plugin reads konduit's catalog when OpenClaw refreshes its model list and when it resolves a model it does not list; without this scope a refresh fails and you are left with the models your config names |
 | `usage:read` | the balance and the limits on the provider card, nothing else |
 
 konduit's scopes are a flat allowlist, so `chat:write` does not imply
@@ -89,18 +89,64 @@ them, it does not switch them off, and a model you already have in your config
 should not vanish from the list because of a label. Only `retired` deployments
 are left out. The default model is never a deprecated one.
 
-CI checks the committed list against the live catalog. Live discovery is on as
-well, and it reads konduit's catalog with the same projection the generator
-uses: a deployment konduit adds appears before the next release with its real
-context window, output cap, capabilities and price, and can be selected right
-away. Deployments that do not serve chat — the embedding ones — stay out of the
+CI checks the committed list against the live catalog, but the committed list
+is only the offline seed. When OpenClaw refreshes its model list, the plugin
+reads konduit's catalog with the same projection the generator uses, and what
+konduit answers wins — for every model, not just new ones: name, `input`,
+context window, output cap, reasoning and price. A deployment konduit adds
+appears before the next release and can be selected right away; a model
+konduit starts serving images for shows `text+image` after the next refresh.
+Deployments that do not serve chat — the embedding ones — stay out of the
 model list rather than being offered as something to talk to.
+
+The manifest declares the catalog `"runtime"` for that reason. OpenClaw lays
+the manifest rows of a `"refreshable"` or `"static"` provider over whatever
+discovery returns for the same id, so under 0.3.0 a refresh could add models
+but never correct one the release already listed.
 
 Each model's `input` is `["text", "image"]` when konduit's catalog says
 `capabilities.vision: true`, and `["text"]` otherwise — including while
 konduit has not shipped that field yet, which is also how an older konduit
-reads today. A model that starts seeing images gets it the moment the
-generator is rerun against the live catalog; nothing here guesses.
+reads today. Nothing here guesses.
+
+### After `plugins update`, and after any Gateway restart
+
+Refresh the list once:
+
+```sh
+openclaw models list --provider konduit --refresh
+```
+
+(or press Refresh in the Control UI's model picker). Until you do, `openclaw
+models list` shows only the konduit models your config names — typically just
+the default. That is OpenClaw 2026.9.4, not the plugin, and no plugin setting
+changes it:
+
+- The Gateway starts with a static catalog pass and does not run provider
+  discovery on startup; ordinary `models list` and the picker never start it
+  either. Only an explicit refresh does.
+- The inventory a refresh discovers lives in the Gateway's memory. For a
+  provider installed from ClawHub it is not written to the on-disk catalog
+  cache, so every restart — including the automatic one after `openclaw plugins
+  update` — starts without it.
+
+Every konduit model stays selectable in the meantime (`/model
+konduit/<id>`); it is only missing from the list. OpenClaw also has no periodic
+provider refresh; the plugin's own one-minute cache only spares konduit
+repeated requests during one refresh or model lookup.
+
+### `Trust: reason=provenance-invalid`
+
+`openclaw plugins inspect konduit` reports `provenance-invalid` for every
+install from ClawHub, and a reinstall does not change it. OpenClaw reserves
+`trusted-official` for packages in its own official external plugin catalog,
+installed from ClawHub's `official` channel; konduit is published to the
+`community` channel, and OpenClaw files every community install under
+`provenance-invalid`. It gates only runtime APIs OpenClaw keeps for trusted
+plugins, none of which this plugin uses. The install notice `Plugin manifest id
+"konduit" differs from npm package name "@konduiteu/openclaw"` is informational:
+the manifest id is the config key, which is why the plugin is `konduit` in your
+config.
 
 **One caveat.** OpenClaw prices models in US dollars per million tokens and
 has no currency field. konduit prices in euros; the euro figures are stored
