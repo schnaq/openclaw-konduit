@@ -16,6 +16,16 @@ describe("the manifest", () => {
     expect(manifest.setup.providers[0]).toMatchObject({ id: PROVIDER_ID, envVars: ["KONDUIT_API_KEY"] });
   });
 
+  // "runtime", not "refreshable": OpenClaw 2026.9.4 overlays the manifest rows
+  // of a refreshable (or static) provider onto every row discovery returns for
+  // the same id — input, context window and reasoning included — so a model
+  // konduit starts serving images for would stay text-only until a plugin
+  // release. Runtime rows are left out of that overlay, which leaves konduit's
+  // own GET /v1/models authoritative and the manifest as the offline seed.
+  it("declares its catalog runtime-owned, so live metadata wins over the manifest", () => {
+    expect(manifest.modelCatalog.discovery).toEqual({ [PROVIDER_ID]: "runtime" });
+  });
+
   it("names a default model it also lists", () => {
     const catalog = manifest.modelCatalog.providers.konduit;
     expect(catalog.models.length).toBeGreaterThan(0);
@@ -158,6 +168,36 @@ describe("konduitLiveModelDiscovery", () => {
     expect(models).toEqual([
       expect.objectContaining({ id: "scaleway/brand-new-11b", contextWindow: 64000, maxTokens: 8192 }),
     ]);
+  });
+
+  it("takes a listed model's capabilities, limits and price from konduit, not from the manifest", () => {
+    const fallback = buildKonduitProvider();
+    const listed = fallback.models.find((model) => model.input?.length === 1)!;
+    const [model] = konduitLiveModelDiscovery.projectRows(
+      [
+        {
+          id: listed.id,
+          display_name: "Renamed upstream",
+          modality: "chat",
+          context_window: 999_999,
+          max_output_tokens: 12_345,
+          reasoning: !listed.reasoning,
+          capabilities: { streaming: true, tools: true, json_mode: true, vision: true },
+          pricing: { currency: "EUR", unit: "micro_eur_per_million_tokens", input: 1_000_000, output: 3_000_000 },
+          deployment: { status: "active" },
+        },
+      ],
+      fallback,
+    );
+    expect(model).toMatchObject({
+      id: listed.id,
+      name: "Renamed upstream",
+      input: ["text", "image"],
+      contextWindow: 999_999,
+      maxTokens: 12_345,
+      reasoning: !listed.reasoning,
+      cost: { input: 1, output: 3, cacheRead: 0, cacheWrite: 0 },
+    });
   });
 
   it("hands back the catalog OpenClaw would have used when konduit answers nothing readable", () => {
