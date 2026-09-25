@@ -2,7 +2,7 @@
   "id": "konduit",
   "name": "konduit",
   "description": "European AI inference through konduit, with live balance and rate limits.",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "categories": [
     "models"
   ],
@@ -30,7 +30,8 @@
             "name": "Qwen3.6 35B A3B",
             "reasoning": true,
             "input": [
-              "text"
+              "text",
+              "image"
             ],
             "contextWindow": 262144,
             "maxTokens": 4096,
@@ -51,7 +52,8 @@
             "name": "Qwen3.8 27B",
             "reasoning": true,
             "input": [
-              "text"
+              "text",
+              "image"
             ],
             "contextWindow": 262144,
             "maxTokens": 4096,
@@ -93,7 +95,8 @@
             "name": "Mistral Small 4",
             "reasoning": true,
             "input": [
-              "text"
+              "text",
+              "image"
             ],
             "contextWindow": 262144,
             "maxTokens": 4096,
@@ -135,7 +138,8 @@
             "name": "Gemma 4 26B A4B IT",
             "reasoning": true,
             "input": [
-              "text"
+              "text",
+              "image"
             ],
             "contextWindow": 256000,
             "maxTokens": 32768,
@@ -219,7 +223,8 @@
             "name": "Mistral Medium 3.5 128B",
             "reasoning": false,
             "input": [
-              "text"
+              "text",
+              "image"
             ],
             "contextWindow": 180000,
             "maxTokens": 16384,
@@ -240,7 +245,8 @@
             "name": "Mistral Small 3.2",
             "reasoning": false,
             "input": [
-              "text"
+              "text",
+              "image"
             ],
             "contextWindow": 128000,
             "maxTokens": 4096,
@@ -261,7 +267,8 @@
             "name": "Pixtral 12B 2409",
             "reasoning": false,
             "input": [
-              "text"
+              "text",
+              "image"
             ],
             "contextWindow": 128000,
             "maxTokens": 4096,
@@ -324,7 +331,8 @@
             "name": "Qwen3.5 397B A17B",
             "reasoning": true,
             "input": [
-              "text"
+              "text",
+              "image"
             ],
             "contextWindow": 250000,
             "maxTokens": 16384,
@@ -345,7 +353,8 @@
             "name": "Qwen3.6 35B A3B",
             "reasoning": true,
             "input": [
-              "text"
+              "text",
+              "image"
             ],
             "contextWindow": 262144,
             "maxTokens": 4096,
@@ -366,7 +375,8 @@
             "name": "Gemma 3 27B IT",
             "reasoning": false,
             "input": [
-              "text"
+              "text",
+              "image"
             ],
             "contextWindow": 131072,
             "maxTokens": 4096,
@@ -387,7 +397,8 @@
             "name": "Gemma 4 31B IT",
             "reasoning": true,
             "input": [
-              "text"
+              "text",
+              "image"
             ],
             "contextWindow": 256000,
             "maxTokens": 4096,
@@ -471,7 +482,8 @@
             "name": "Qwen3-VL 235B",
             "reasoning": false,
             "input": [
-              "text"
+              "text",
+              "image"
             ],
             "contextWindow": 200000,
             "maxTokens": 16384,
@@ -492,7 +504,8 @@
             "name": "Qwen3.6 27B",
             "reasoning": true,
             "input": [
-              "text"
+              "text",
+              "image"
             ],
             "contextWindow": 262144,
             "maxTokens": 16384,
@@ -513,7 +526,8 @@
             "name": "Qwen3.8 27B",
             "reasoning": true,
             "input": [
-              "text"
+              "text",
+              "image"
             ],
             "contextWindow": 262144,
             "maxTokens": 4096,
