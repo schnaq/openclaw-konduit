@@ -38,7 +38,7 @@ it: OpenClaw merges your entries with the plugin's by model id, and your
 probes a provider by asking the configured model for a reply worth eight output
 tokens. A deployment that reasons spends them on reasoning and returns no
 visible text, and the probe reads that as a failure — konduit answered `200`.
-Eight of the fourteen chat deployments reason, the default `scaleway/gpt-oss-120b`
+Many of the chat deployments reason, the default `scaleway/gpt-oss-120b`
 among them, so a fresh install is likely to show it. Ask the model something
 instead; that is the test that counts:
 
@@ -75,6 +75,15 @@ The catalog is authenticated because it carries prices, so this needs a key
 with `models:read` — and nothing else. That is the scope the repository's
 `KONDUIT_API_KEY` secret carries, and all `catalog:check` in CI asks for.
 
+Without a key, `npm run catalog -- --snapshot <path>` reads konduit's own
+catalogdata snapshot instead (a checkout of the konduit repository,
+`services/control-api/internal/catalogdata/snapshots/*.json`) and writes the
+same manifest shape from it — whatever that checkout's snapshot says, which
+may be ahead of what is deployed (an unreleased snapshot) or behind it (a
+stale checkout); it is not a substitute for `catalog:check` against the live
+API. It also cannot see a `capabilities.vision` the snapshot has no field for
+yet even if the live API already does (see "input" below).
+
 That includes deployments konduit marks `deprecated`: the status discourages
 them, it does not switch them off, and a model you already have in your config
 should not vanish from the list because of a label. Only `retired` deployments
@@ -86,6 +95,12 @@ uses: a deployment konduit adds appears before the next release with its real
 context window, output cap, capabilities and price, and can be selected right
 away. Deployments that do not serve chat — the embedding ones — stay out of the
 model list rather than being offered as something to talk to.
+
+Each model's `input` is `["text", "image"]` when konduit's catalog says
+`capabilities.vision: true`, and `["text"]` otherwise — including while
+konduit has not shipped that field yet, which is also how an older konduit
+reads today. A model that starts seeing images gets it the moment the
+generator is rerun against the live catalog; nothing here guesses.
 
 **One caveat.** OpenClaw prices models in US dollars per million tokens and
 has no currency field. konduit prices in euros; the euro figures are stored
