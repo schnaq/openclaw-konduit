@@ -75,9 +75,18 @@ describe("projectSnapshot", () => {
     expect(projectSnapshot(embedding)[0]?.pricing.output).toBeNull();
   });
 
-  it("carries no capabilities.vision, because the snapshot does not have the field yet", () => {
+  it("carries no capabilities.vision for a snapshot older than the field", () => {
     const [model] = projectSnapshot(snapshot());
     expect(model.capabilities).not.toHaveProperty("vision");
+  });
+
+  it.each([true, false])("projects supports_vision %s to capabilities.vision", (vision) => {
+    const base = snapshot();
+    const [model] = projectSnapshot({
+      ...base,
+      models: base.models.map((m) => ({ ...m, supports_vision: vision })),
+    });
+    expect(model.capabilities.vision).toBe(vision);
   });
 
   it("refuses a deployment whose model id the snapshot does not list, rather than writing a shorter manifest silently", () => {

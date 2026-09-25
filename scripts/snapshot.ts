@@ -10,13 +10,10 @@
 // away. `scripts/catalog.ts --snapshot <path>` reads it through this module
 // instead of fetching.
 //
-// The snapshot has no `capabilities.vision` yet — that field is landing in
-// konduit's contract separately (see src/catalog-mapping.ts) — so every model
-// this projects comes out with `vision` absent, same as an old konduit. That
-// is intentional: this script does not guess which deployments see images.
-// Once konduit ships the field, `npm run catalog` against the live,
-// authenticated API is what turns a vision-capable id like
-// `stackit/qwen3-vl-235b-a22b` into `input: ["text", "image"]`.
+// `supports_vision` is projected to `capabilities.vision` exactly as konduit's
+// API serves it. A snapshot older than the field has none, which projects as
+// `vision` absent — text only, the same as an old konduit — so this script
+// never guesses which deployments see images.
 import type { KonduitModel } from "../src/catalog-mapping.ts";
 
 type SnapshotModel = {
@@ -29,6 +26,8 @@ type SnapshotModel = {
   supports_streaming: boolean;
   supports_tools: boolean;
   supports_json_mode: boolean;
+  // Absent in a snapshot older than konduit catalogue v25.
+  supports_vision?: boolean;
 };
 
 type SnapshotDeployment = {
@@ -79,6 +78,7 @@ export function projectSnapshot(snapshot: CatalogSnapshot): KonduitModel[] {
         streaming: model.supports_streaming,
         tools: model.supports_tools,
         json_mode: model.supports_json_mode,
+        ...(typeof model.supports_vision === "boolean" ? { vision: model.supports_vision } : {}),
       },
       pricing: {
         currency: "EUR",
