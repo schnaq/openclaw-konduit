@@ -80,7 +80,7 @@ describe("projectSnapshot", () => {
     expect(model.capabilities).not.toHaveProperty("vision");
   });
 
-  it("leaves out a deployment whose model id the snapshot does not list", () => {
+  it("refuses a deployment whose model id the snapshot does not list, rather than writing a shorter manifest silently", () => {
     const orphaned = snapshot({
       deployments: [
         {
@@ -91,7 +91,7 @@ describe("projectSnapshot", () => {
         },
       ],
     });
-    expect(projectSnapshot(orphaned)).toEqual([]);
+    expect(() => projectSnapshot(orphaned)).toThrow(/nonexistent/);
   });
 
   it("projects one entry per deployment, so a model served by two providers appears twice", () => {

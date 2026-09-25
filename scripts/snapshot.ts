@@ -17,7 +17,7 @@
 // Once konduit ships the field, `npm run catalog` against the live,
 // authenticated API is what turns a vision-capable id like
 // `stackit/qwen3-vl-235b-a22b` into `input: ["text", "image"]`.
-import type { KonduitModel } from "../src/catalog-mapping.js";
+import type { KonduitModel } from "../src/catalog-mapping.ts";
 
 type SnapshotModel = {
   id: string;
@@ -55,15 +55,19 @@ function deploymentId(deployment: SnapshotDeployment): string {
 
 /**
  * One KonduitModel per deployment in the snapshot, in the shape mapCatalog
- * already understands. A deployment naming a model the snapshot does not list
- * is left out — that is a malformed snapshot, not something to guess at.
+ * already understands. Throws on a deployment naming a model the snapshot
+ * does not list — a malformed snapshot, not something to guess at or drop
+ * quietly, which would write a manifest shorter than the source it came from
+ * without saying so.
  */
 export function projectSnapshot(snapshot: CatalogSnapshot): KonduitModel[] {
   const modelsById = new Map(snapshot.models.map((model) => [model.id, model]));
   const projected: KonduitModel[] = [];
   for (const deployment of snapshot.deployments) {
     const model = modelsById.get(deployment.model_id);
-    if (!model) continue;
+    if (!model) {
+      throw new Error(`deployment ${deploymentId(deployment)} names model ${deployment.model_id}, which the snapshot does not list`);
+    }
     projected.push({
       id: deploymentId(deployment),
       display_name: model.display_name,

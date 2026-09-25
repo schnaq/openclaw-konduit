@@ -78,10 +78,11 @@ with `models:read` — and nothing else. That is the scope the repository's
 Without a key, `npm run catalog -- --snapshot <path>` reads konduit's own
 catalogdata snapshot instead (a checkout of the konduit repository,
 `services/control-api/internal/catalogdata/snapshots/*.json`) and writes the
-same manifest shape from it. It carries the same context window, output cap
-and price as the live catalog, one release behind at most; it just cannot see
-a `capabilities.vision` konduit has not shipped yet even if the live API
-already has (see "input" below).
+same manifest shape from it — whatever that checkout's snapshot says, which
+may be ahead of what is deployed (an unreleased snapshot) or behind it (a
+stale checkout); it is not a substitute for `catalog:check` against the live
+API. It also cannot see a `capabilities.vision` the snapshot has no field for
+yet even if the live API already does (see "input" below).
 
 That includes deployments konduit marks `deprecated`: the status discourages
 them, it does not switch them off, and a model you already have in your config
