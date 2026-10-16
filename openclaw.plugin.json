@@ -2,7 +2,7 @@
   "id": "konduit",
   "name": "konduit",
   "description": "European AI inference through konduit, with live balance and rate limits.",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "categories": [
     "models"
   ],
@@ -156,8 +156,8 @@
             }
           },
           {
-            "id": "scaleway/glm-5.2",
-            "name": "GLM-5.2",
+            "id": "scaleway/glm-5.3",
+            "name": "GLM-5.3",
             "reasoning": true,
             "input": [
               "text"
