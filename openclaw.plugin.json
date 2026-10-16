@@ -2,7 +2,7 @@
   "id": "konduit",
   "name": "konduit",
   "description": "European AI inference through konduit, with live balance and rate limits.",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "categories": [
     "models"
   ],
@@ -124,6 +124,28 @@
             "cost": {
               "input": 0.4,
               "output": 0.8,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            },
+            "compat": {
+              "supportsUsageInStreaming": true,
+              "supportsTools": true,
+              "maxTokensField": "max_tokens"
+            }
+          },
+          {
+            "id": "scaleway/deepseek-v4.1-flash",
+            "name": "DeepSeek V4.1 Flash",
+            "reasoning": true,
+            "input": [
+              "text",
+              "image"
+            ],
+            "contextWindow": 256000,
+            "maxTokens": 32768,
+            "cost": {
+              "input": 0.6,
+              "output": 1.8,
               "cacheRead": 0,
               "cacheWrite": 0
             },
@@ -361,6 +383,28 @@
             "cost": {
               "input": 0.25,
               "output": 1.5,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            },
+            "compat": {
+              "supportsUsageInStreaming": true,
+              "supportsTools": true,
+              "maxTokensField": "max_tokens"
+            }
+          },
+          {
+            "id": "scaleway/qwen3.8-27b",
+            "name": "Qwen3.8 27B",
+            "reasoning": true,
+            "input": [
+              "text",
+              "image"
+            ],
+            "contextWindow": 262144,
+            "maxTokens": 4096,
+            "cost": {
+              "input": 0.6,
+              "output": 3.3,
               "cacheRead": 0,
               "cacheWrite": 0
             },
