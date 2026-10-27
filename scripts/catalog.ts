@@ -1,6 +1,7 @@
 // Rewrites modelCatalog.providers.konduit in openclaw.plugin.json from
 // konduit's own GET /v1/models, so the two dozen-odd entries never drift by
-// hand. `--check` exits 1 when the committed manifest is behind; CI runs it.
+// hand. `--check` exits 1 when a model the manifest lists is no longer served
+// (or its default is not); extra live models are fine. CI runs it.
 //
 // Needs KONDUIT_API_KEY: the catalog is authenticated (it carries prices).
 // A key with only the models:read scope is enough and is what CI holds.
@@ -14,6 +15,7 @@
 // the claim CI needs — CI needs "matches what konduit currently serves".
 import { readFileSync, writeFileSync } from "node:fs";
 import { mapCatalog, pickDefaultModel, type KonduitModel } from "../src/catalog-mapping.ts";
+import { checkSubset } from "./catalog-check.ts";
 import { projectSnapshot, type CatalogSnapshot } from "./snapshot.ts";
 
 const MANIFEST = new URL("../openclaw.plugin.json", import.meta.url);
@@ -58,6 +60,17 @@ if (snapshotPath) {
   sourceModels = body.data;
 }
 
+if (check) {
+  const problems = checkSubset(provider, sourceModels.map((m) => m.id));
+  if (problems.length > 0) {
+    for (const problem of problems) console.error(problem);
+    console.error("Run `npm run catalog` and commit, or fix the CI key's organisation grants.");
+    process.exit(1);
+  }
+  console.log(`all ${provider.models.length} manifest models are listed live (${sourceModels.length} live)`);
+  process.exit(0);
+}
+
 const models = mapCatalog(sourceModels);
 if (models.length === 0) {
   console.error("konduit returned no active chat deployment; refusing to write an empty catalog");
@@ -86,13 +99,5 @@ const next = {
 };
 const rendered = `${JSON.stringify(next, null, 2)}\n`;
 
-if (check) {
-  if (rendered !== current) {
-    console.error("openclaw.plugin.json is behind GET /v1/models. Run `npm run catalog` and commit.");
-    process.exit(1);
-  }
-  console.log(`openclaw.plugin.json matches ${models.length} deployments`);
-} else {
-  writeFileSync(MANIFEST, rendered);
-  console.log(`wrote ${models.length} deployments to openclaw.plugin.json (default ${defaultModel})`);
-}
+writeFileSync(MANIFEST, rendered);
+console.log(`wrote ${models.length} deployments to openclaw.plugin.json (default ${defaultModel})`);
