@@ -75,6 +75,12 @@ The catalog is authenticated because it carries prices, so this needs a key
 with `models:read` — and nothing else. That is the scope the repository's
 `KONDUIT_API_KEY` secret carries, and all `catalog:check` in CI asks for.
 
+`npm run catalog:check` is a subset test: every model in the manifest must
+still be listed by `GET /v1/models`, and `defaultModel` must be among them. It
+exits 1 naming the missing ids. Extra live models are fine, because the key
+lists only what its organisation may call and runtime discovery serves the
+rest.
+
 Without a key, `npm run catalog -- --snapshot <path>` reads konduit's own
 catalogdata snapshot instead (a checkout of the konduit repository,
 `services/control-api/internal/catalogdata/snapshots/*.json`) and writes the
